@@ -19,9 +19,24 @@ const bodyParser = require('body-parser');
 app.use(bodyParser.urlencoded({ extended: true }));
 
 app.get('/', async (req, res) => {
-    const { rows } = await pool.query('SELECT * FROM items ORDER BY RANDOM() LIMIT 1');
+    // Fetch a random item
+    const randomItemResult = await pool.query('SELECT * FROM items ORDER BY RANDOM() LIMIT 1');
+    const randomItem = randomItemResult.rows[0];
+
+    // Fetch all items
+    const allItemsResult = await pool.query('SELECT * FROM items ORDER BY id');
+    const items = allItemsResult.rows;
+
+    // Generate HTML for the list of all items
+    let itemsListHtml = '<ul>';
+    for (const item of items) {
+        itemsListHtml += `<li>${item.id}: ${item.content}</li>`;
+    }
+    itemsListHtml += '</ul>';
+
+    // Send the complete HTML response
     res.send(`
-        <h1>Random Item: ${rows[0].content}</h1>
+        <h1>Random Item: ${randomItem ? randomItem.content : 'No items found'}</h1>
         <button onclick="location.reload()">Next</button>
         <form action="/add" method="post">
             <input type="text" name="content" placeholder="Add new item">
@@ -31,8 +46,11 @@ app.get('/', async (req, res) => {
             <input type="number" name="id" placeholder="ID to delete">
             <button type="submit">Delete Item</button>
         </form>
+        <h2>All Items:</h2>
+        ${itemsListHtml}
     `);
 });
+
 
 // Add item
 app.post('/add', async (req, res) => {
